@@ -1,0 +1,10 @@
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+moon_fake_-8_nosun.txt arca19_moon_fake_-8
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+moon_fake_-4_nosun.txt arca19_moon_fake_-4
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+moon_fake_4_nosun.txt arca19_moon_fake_4
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+moon_fake_8_nosun.txt arca19_moon_fake_8
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+moon_fake_12_nosun.txt arca19_moon_fake_12
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+sun_fake_-8_nomoon.txt arca19_moon_fake_-8
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+sun_fake_-4_nomoon.txt arca19_moon_fake_-4
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+sun_fake_4_nomoon.txt arca19_moon_fake_4
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+sun_fake_8_nomoon.txt arca19_moon_fake_8
+/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+sun_fake_12_nomoon.txt arca19_moon_fake_12

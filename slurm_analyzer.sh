@@ -11,5 +11,4 @@
 module unload km3net_env
 module load km3net_soft_env/1.9
 
-./test_data_analysis.exe ${FILE} ${PLOT}
-
+./contour_data.exe ${CSV} ${OUTFILE_NAME} ${BETA_CUT} ${MAXDEG} ${BIN_SIZE}
