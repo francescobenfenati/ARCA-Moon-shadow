@@ -64,8 +64,8 @@ Double_t bkg(Double_t *x, Double_t *par) {
 
 int main(int argc, char** argv) {
   
-  if (argc < 4) {
-    cout << "4 arguments are required: <input_file> <output_plots_name> <beta_cut> <lambda_map_binning> "<<endl;
+  if (argc < 5) {
+    cout << "5 arguments are required: <input_file> <output_plots_name> <beta_cut> <lambda_map_max_degree> <lambda_map_binning> "<<endl;
     exit(1);
   }
 
@@ -85,12 +85,12 @@ int main(int argc, char** argv) {
  double beta_cut = std::stof(argv[3]);
  //double beta_cut = 0.32; //<---------- 0.31 for comb. ARCA6, 0.32 for ARCA8 and ARCA
  //cout<<"sig = "<<sig<<endl;
- cout<<"beta_cut = "<<beta_cut<<endl;
+ //cout<<"beta_cut = "<<beta_cut<<endl;
  float size = 0.05; // label and title size for various axes
 
 // ---------- define 2D histogram of event number distribution
 
- double MaxGrad = 7.;
+ double MaxGrad = std::stof(argv[4]);
  double Bin = 0.1;
  int Nbin2 = (2.*MaxGrad + Bin/2. ) / Bin;
  TH2D *h2_noshad = new TH2D("h2_noshad","",Nbin2,-MaxGrad,MaxGrad,Nbin2,-MaxGrad,MaxGrad);
@@ -165,13 +165,16 @@ int main(int argc, char** argv) {
  cout << "Analyzing: "<<argv[1]<<endl;
  cout << "2D plot will be saved as: "<<argv[2]<<endl; 
  cout << "Beta0 cut = "<<argv[3]<<endl;
+ cout << "Maxdeg = "<<argv[4]<<endl;
+ cout << "Bin size = "<<argv[5]<<endl;
+
  int n_h1 =0;
-   double p_nomoon;
-   double chi2Fit0;
-   // ---------- loop over ntuple muon events --------------------------
-   double dtr = TMath::DegToRad();
-   ifstream fstream;
- 
+ double p_nomoon;
+ double chi2Fit0;
+ // ---------- loop over ntuple muon events --------------------------
+ double dtr = TMath::DegToRad();
+ ifstream fstream;
+   
    //fstream.open("csv/arca_data_9635-11707_pre+anoise+combined_shadow.txt");
    //fstream.open("csv/arca19/data/arca19_data_pre+anoise+sun.txt");
    //fstream.open("csv/arca19/data/arca19_data_pre+anoise+moon_fake_-8.txt");
@@ -443,8 +446,8 @@ int main(int argc, char** argv) {
     //double BinChi2 = 0.5;//0.1;
     //int NbinChi2 = (2.*MaxGrad2 + BinChi2/2. ) / BinChi2;
 
-    double max_deg = 10.;
-    double BinChi2 = atof(argv[4]);
+    double max_deg = std::stof(argv[4]);
+    double BinChi2 = std::stof(argv[5]);
     cout<<"binchi2 = "<<BinChi2<<endl;
     double MinGrad2 = -max_deg+BinChi2;
     double MaxGrad2 = +max_deg+BinChi2;
@@ -613,9 +616,9 @@ double contours[3];
  //c4->SaveAs("/sps/km3net/users/fbenfe/Moon_shadow/combined_shadow/data/true_azi/arca19_moon_6deg_-8h.pdf");
  */
 
-    std::string hist_name = std::string("/sps/km3net/users/fbenfe/Moon_shadow/plot/")+std::string(argv[2])+std::string("_bin_")+std::string(argv[3])+std::string("_2d_histogram.pdf");
+    std::string hist_name = std::string(argv[2])+std::string("_bin_")+std::string(argv[4])+std::string("_2d_histogram.pdf");
     const char* hist_name_char = hist_name.c_str();
-    std::string contour_name = std::string("/sps/km3net/users/fbenfe/Moon_shadow/plot/")+std::string(argv[2])+std::string("_bin_")+std::string(argv[3])+std::string("_contour.pdf");
+    std::string contour_name = std::string(argv[2])+std::string("_bin_")+std::string(argv[4])+std::string("_contour.pdf");
     const char* contour_name_char = contour_name.c_str();
 
     c4->SaveAs(hist_name_char);
