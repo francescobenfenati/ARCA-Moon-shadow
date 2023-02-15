@@ -41,7 +41,7 @@ import km3db
 
 start_time = time.time()
 
-def data_extractor(filetype,filename):
+def data_extractor(filetype,filename,outfile):
 
     #dstfile = open(filename, "r")
     dstfile = filename
@@ -147,8 +147,10 @@ def data_extractor(filetype,filename):
     print(dfb["time"])
     
     #dfb=dfb.drop(["showerfit_ra","showerfit_dec","sH_nhits","sH_atot","sH_tmin","sH_tmax","sH_ndoms","sH_nlines"],axis=1)
-    #drop these only if not using NN for classification
-    dfb=dfb.drop(["fitinf5","fitinf6","fitinf7","fitinf8","fitinf9","fitinf11","fitinf12","fitinf13","fitinf14","fitinf15","fitinf16","fitinf17","fitinf18","fitinf19","fitinf20","fitinf21","fitinf22"],axis=1)
+    dfb=dfb.drop(['fitinf8','fitinf11','fitinf12','fitinf17'],axis=1)
+    
+    #drop these only if not using NN for classification:
+    #dfb=dfb.drop(["fitinf5","fitinf6","fitinf7","fitinf8","fitinf9","fitinf11","fitinf12","fitinf13","fitinf14","fitinf15","fitinf16","fitinf17","fitinf18","fitinf19","fitinf20","fitinf21","fitinf22"],axis=1)
 
     '''
     dfb=moon_sun_dist(dfb,dfb["phi"],dfb["time"],dfb["theta"],loc="arca")  #git issue, local event requires phi insted of azi
@@ -165,7 +167,7 @@ def data_extractor(filetype,filename):
     
 
     dfb_sun = dfb_sun.reset_index(drop=True)
-    dfb_moon = dfb_sun.reset_index(drop=True)
+    dfb_moon = dfb_moon.reset_index(drop=True)
     
     print(dfb_sun.keys())
     print(len(dfb_sun.keys()))
@@ -179,7 +181,7 @@ def data_extractor(filetype,filename):
         print(dfi["run_id"].unique())
         print(dfi.keys())
         print(len(dfi))
-        dfi.to_hdf("/sps/km3net/users/fbenfe/Moon_shadow/dataframes/data/arca21/arca21_grbv8_pre+anoise_"+str(run)+".h5", key='df', mode='w')
+        dfi.to_hdf("/sps/km3net/users/fbenfe/Moon_shadow/"+outfile+'_'+str(run)+".h5", key='df', mode='w')
 
     return None
     
@@ -328,9 +330,9 @@ if __name__ == "__main__":
 
     filety='data'
     filename = sys.argv[1]
+    output = sys.argv[2]
 
-
-    data_extractor(filety,filename)
+    data_extractor(filety,filename,output)
     #data = data_extractor(filety,filename)
     '''
     data_sun.to_csv('dataframes/data/arca21/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)

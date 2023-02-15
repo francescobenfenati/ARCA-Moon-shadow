@@ -61,7 +61,7 @@ def data_extractor(filetype,filename):
     
     dfb = dfb.reset_index(drop=True)    
     dfb_sun = dfb_sun.reset_index(drop=True)
-    dfb_moon = dfb_sun.reset_index(drop=True)
+    dfb_moon = dfb_moon.reset_index(drop=True)
 
     print(dfb_sun.keys())
     print(len(dfb_sun.keys()))
