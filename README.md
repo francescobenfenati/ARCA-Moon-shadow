@@ -1,17 +1,22 @@
 Cosmic rays are blocked by nearby celestial bodies such as the Moon and the Sun. This induces a deficit in the atmospheric muon flux coming from the direction of these objects. Its observation can be used to verify the pointing accuracy and angular resolution of detectors which are able to measure the secondary muon flux from cosmic ray interactions.
 This analysis is based on a comparison between the observed atmospheric muon flux coming from the Moon/Sun directions to the expected flux in case of no Moon/Sun. The search for the shadow of the Moon/Sun is done in the phase space of the angular differences between the reconstructed track coordinates and the celestial object. Both a 1-dimensional and a 2-dimensional analysis have been performed. The 1-dimensional analysis uses the space angle between the Moon/Sun and the track. The 2-dimensional analysis uses two Cartesian coordinates [x, y], starting from the zenith and azimuth angles of the sky object and the tracks.
 
+Muon tracks are selected by applying a chosen set of cuts on reconstruction-quality parameters, the most effective one being the estimated error on the track angular resolution.
+ARCA8 (i.e. ARCA detector configuration with 8 Detection Units) data has been analyzed.
+After an evaluation of the angular resolution distribution from the MonteCarlo amtmospheric muons simulations after applying the selected cuts and the combined Moon and Sun shadow 1D and 2D analysis, a classifier neural network has been developed in order to improve the quality of the selected tracks.
+The code of the network is available on Google Colab at this link: 
+
+The new dataset which contains tracks selected by applying the NN shows a significant improvement in the angular resolution distribution.
+Also, in the 1D and 2D plots the presence of a signal is more evident, although the statistics is still too low to observe a clear signal (Event densities of ~1500 /deg^2 are estimated to be required for a 3sigma  signal)
 
 
-
-
-#####################################################
+######################################################
 #####EXTRACT AND CUT DATA ROOT FILES#####
 ######################################################
 
 ./extractor.sh <list_of_root_files> <name_of_output_file> <name_of_logfile>
 
-this calls the script slurm_extractor.sh which in turn calls arca_data_extractor.py
+This calls the script slurm_extractor.sh which in turn calls arca_data_extractor.py
 Note: in the python script, change the directory where csv files are written according to the detid.
 Also: if using the NN for classification, or if you use dst files, change the script accordingly
 
