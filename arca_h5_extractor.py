@@ -211,20 +211,28 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     outfile = sys.argv[2]
 
+    print("outfile name = ",outfile)
     data,data_sun,data_moon = data_extractor(filety,filename)
     #data = data_extractor(filety,filename)
     
-    data_sun.to_csv('dataframes/data/arca21/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
-    data_moon.to_csv('dataframes/data/arca21/'+outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
+    data = data[['likelihood', 'dir_x', 'dir_y', 'dir_z', 'pos_x', 'pos_y', 'pos_z',
+       'Energy', 'rec_stages', 'rec_type', 'fitinf0', 'fitinf1', 'fitinf2',
+       'fitinf3', 'fitinf4', 'fitinf5', 'fitinf6', 'fitinf7', 'fitinf9',
+       'fitinf10', 'fitinf13', 'fitinf14', 'fitinf15', 'fitinf16', 'fitinf18',
+       'fitinf19', 'fitinf20', 'fitinf21', 'fitinf22', 'theta', 'alt', 'phi',
+       'source_azimuth', 'source_zenith']]
 
-    data_sun = data_sun[["x","y","fitinf0","sun_dist","likelihood","fitinf10","t_sec"]]
-    data_moon = data_moon[["x","y","fitinf0","moon_dist","likelihood","fitinf10","t_sec"]]
+    data_sun.to_csv(outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
+    data_moon.to_csv(outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
 
-    data_sun.to_csv('csv/arca21/data/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
-    data_moon.to_csv('csv/arca21/data/'+outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
+    
+    #data_moon = data_moon[["x","y","fitinf0","moon_dist","likelihood","fitinf10","t_sec"]]
+
+    #data_sun.to_csv(outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
+    #data_moon.to_csv(outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
     
     
     #save all events, no cut near moon/sun
-    data.to_csv('csv/arca21/data/'+outfile+'.txt', sep=',', header=False, index=False, mode='a')   
+    data.to_csv(outfile+'.txt', sep=',', header=False, index=False, mode='a')   
 
     print("---------",time.time() - start_time," seconds ----------")

@@ -1,3 +1,7 @@
+//-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+//The script asks for a sigm res. value, obtained from the 1D analysis. However by default it uses the value only as initial par. value for the 2D hist fit, and produces the lambda plot by fitting with the sigma res. found with the 2D hist. (i.e. Sig0). If you want to use the sigma res. from the 1D analyses, you need to change that line in the fit.
+//------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 #include "TVirtualFitter.h"
 #include "TFile.h"
 #include "TLegend.h"
@@ -64,8 +68,8 @@ Double_t bkg(Double_t *x, Double_t *par) {
 
 int main(int argc, char** argv) {
   
-  if (argc < 5) {
-    cout << "5 arguments are required: <input_file> <output_plots_name> <beta_cut> <lambda_map_max_degree> <lambda_map_binning> "<<endl;
+  if (argc < 6) {
+    cout << "6 arguments are required: <input_file> <output_plots_name> <sigma res.> <beta_cut> <lambda_map_max_degree> <lambda_map_binning> "<<endl;
     exit(1);
   }
 
@@ -76,13 +80,13 @@ int main(int argc, char** argv) {
   //TApplication app("app",NULL,NULL); 
   TFile *file=new TFile("data_sun.root", "RECREATE");
   
-  string filename, daz, dalt, fitinf0, sundist, MC_sun_dist, lik, len;
+  string filename, daz, dalt, fitinf0, sundist, MC_sun_dist, lik, len, time, run;
   double chi;
   int nHitFit;
  
- double sig = 0.5; //0.25 for ARCA8/ARCA 0.26 for ARCA6
+ double sig = std::stof(argv[3]) ;//0.5 for ORCA6; //0.25 for ARCA8/ARCA 0.26 for ARCA6
  //double beta_cut = 0.32;//<----------------------------------
- double beta_cut = std::stof(argv[3]);
+ double beta_cut = std::stof(argv[4]);
  //double beta_cut = 0.32; //<---------- 0.31 for comb. ARCA6, 0.32 for ARCA8 and ARCA
  //cout<<"sig = "<<sig<<endl;
  //cout<<"beta_cut = "<<beta_cut<<endl;
@@ -90,8 +94,8 @@ int main(int argc, char** argv) {
 
 // ---------- define 2D histogram of event number distribution
 
- double MaxGrad = std::stof(argv[4]);
- double Bin = 0.1;
+ double MaxGrad = std::stof(argv[5]);
+ double Bin = 0.3;
  int Nbin2 = (2.*MaxGrad + Bin/2. ) / Bin;
  TH2D *h2_noshad = new TH2D("h2_noshad","",Nbin2,-MaxGrad,MaxGrad,Nbin2,-MaxGrad,MaxGrad);
  h2_noshad->SetBinErrorOption(TH2::kPoisson);
@@ -164,9 +168,10 @@ int main(int argc, char** argv) {
 
  cout << "Analyzing: "<<argv[1]<<endl;
  cout << "2D plot will be saved as: "<<argv[2]<<endl; 
- cout << "Beta0 cut = "<<argv[3]<<endl;
- cout << "Maxdeg = "<<argv[4]<<endl;
- cout << "Bin size = "<<argv[5]<<endl;
+ cout << "Sigma res. fixed from 1D analysis: "<<argv[3]<<endl;
+ cout << "Beta0 cut = "<<argv[4]<<endl;
+ cout << "Maxdeg = "<<argv[5]<<endl;
+ cout << "Bin size = "<<argv[6]<<endl;
 
  int n_h1 =0;
  double p_nomoon;
@@ -175,23 +180,21 @@ int main(int argc, char** argv) {
  double dtr = TMath::DegToRad();
  ifstream fstream;
    
-   //fstream.open("csv/arca_data_9635-11707_pre+anoise+combined_shadow.txt");
-   //fstream.open("csv/arca19/data/arca19_data_pre+anoise+sun.txt");
-   //fstream.open("csv/arca19/data/arca19_data_pre+anoise+moon_fake_-8.txt");
    fstream.open(argv[1]);
-   //fstream.open("csv/arca6/arca6_data_9635-10286_pre+anoise+combined_shadow.txt");
+   
 
  {
       while ( ! fstream.eof() )
     {
-      fstream >> daz >> dalt >> fitinf0 >> sundist >> lik >> len;
+      fstream >> daz >> dalt >> fitinf0 >> sundist >> lik >> len >> time >> run;
      double DeltaAzi = std::stof(daz);
      double DeltaAlt = std::stof(dalt);
      double beta0 = std::stof(fitinf0)*TMath::RadToDeg();
      double sun_dist = std::stof(sundist);
      double likelihood = std::stof(lik);
      double track_length = std::stof(len);
-     
+     double time_since_epoch = std::stoi(time);
+     int run_id = std::stoi(run);
      if ( beta0 < beta_cut ) // <------------------------------------------------------ CUT ----------------
        { 
 	 if (DeltaAzi < MaxGrad &&  DeltaAzi > -MaxGrad && DeltaAlt < MaxGrad && DeltaAlt > -MaxGrad ) {
@@ -436,9 +439,9 @@ int main(int argc, char** argv) {
     cout << "lambda_min  = " << lambda_min <<endl;
     cout << "Theta = " << theta <<endl;
     cout << "p-value(0,0) = " << TMath::Prob(-lambda_0,2) <<endl;// 2 becomes 1 if for nominal fit sigma is fixed
-    cout << "sigma = "<<sqrt(2)*TMath::ErfInverse(1.-TMath::Prob(-lambda_0,2)) << endl; // 2 becomes 1 if for nominal fit sigma is fixed
+    cout << "sigma(0,0) = "<<sqrt(2)*TMath::ErfInverse(1.-TMath::Prob(-lambda_0,2)) << endl; // 2 becomes 1 if for nominal fit sigma is fixed
     cout << "p-value(theta) = " << TMath::Prob(theta,2) <<endl;// 2 becomes 1 if for nominal fit sigma is fixed
-    cout << "sigma = "<<sqrt(2)*TMath::ErfInverse(1.-TMath::Prob(theta,2)) << endl; // 2 becomes 1 if for nominal fit sigma is Fixed
+    cout << "sigma(theta) = "<<sqrt(2)*TMath::ErfInverse(1.-TMath::Prob(theta,2)) << endl; // 2 becomes 1 if for nominal fit sigma is Fixed
      
     
 
@@ -446,8 +449,8 @@ int main(int argc, char** argv) {
     //double BinChi2 = 0.5;//0.1;
     //int NbinChi2 = (2.*MaxGrad2 + BinChi2/2. ) / BinChi2;
 
-    double max_deg = std::stof(argv[4]);
-    double BinChi2 = std::stof(argv[5]);
+    double max_deg = std::stof(argv[5]);
+    double BinChi2 = std::stof(argv[6]);
     cout<<"binchi2 = "<<BinChi2<<endl;
     double MinGrad2 = -max_deg+BinChi2;
     double MaxGrad2 = +max_deg+BinChi2;
@@ -491,7 +494,7 @@ int main(int argc, char** argv) {
 	f2->SetParameter(0,Norm);
 	f2->FixParameter(1,XS);
 	f2->FixParameter(2,YS);
-	//f2->FixParameter(3,SigFit);
+	//f2->FixParameter(3,SigFit); // <----------------------------------------- here change if you want to fix with Sig from 1D plot
 	f2->FixParameter(3,Sig0);
 	f2->SetParameter(4,amp);
 	f2->SetParameter(5,A1);
@@ -514,7 +517,7 @@ int main(int argc, char** argv) {
 	//hChi2->SetBinContent(ibin,chi2-chi2Fit);
 	hChi2->SetBinContent(ibin,-lam);
 	
-	//cout<<"XS = "<<XS<<" YS = "<<YS<<" l = "<<lam << " amp = " << f2->GetParameter(4) << " +- " << f2->GetParError(4) << " sigma = " << f2->GetParameter(3) << " +- " << f2->GetParError(3) << endl;
+	cout<<"XS = "<<XS<<" YS = "<<YS<<" l = "<<lam << endl;//" amp = " << f2->GetParameter(4) << " +- " << f2->GetParError(4) << " sigma = " << f2->GetParameter(3) << " +- " << f2->GetParError(3) << endl;
       }
     }
 
@@ -543,6 +546,8 @@ int main(int argc, char** argv) {
     
 
     cout << "lambda_minimum_bin  = " << lamb_min <<endl;
+    cout << "The bin having the maximum value is "<< hChi2->GetXaxis()->GetBinCenter(x)<<","<<hChi2->GetYaxis()->GetBinCenter(y)<<" with "<<\
+      lamb_max <<endl;
     cout << "Theta = " << th <<endl;
     cout << "p-value(theta) = " << TMath::Prob(th,1) <<endl;// 2 becomes 1 if for nominal fit sigma is fixed
     cout << "sigma = "<<sqrt(2)*TMath::ErfInverse(1.-TMath::Prob(th,1)) << endl; // 2 becomes 1 if for nominal fit sigma is fixed
@@ -616,9 +621,9 @@ double contours[3];
  //c4->SaveAs("/sps/km3net/users/fbenfe/Moon_shadow/combined_shadow/data/true_azi/arca19_moon_6deg_-8h.pdf");
  */
 
-    std::string hist_name = std::string(argv[2])+std::string("_bin_")+std::string(argv[4])+std::string("_2d_histogram.pdf");
+    std::string hist_name = std::string(argv[2])+std::string("_bin_")+std::string(argv[5])+std::string("_2d_histogram.pdf");
     const char* hist_name_char = hist_name.c_str();
-    std::string contour_name = std::string(argv[2])+std::string("_bin_")+std::string(argv[4])+std::string("_contour.pdf");
+    std::string contour_name = std::string(argv[2])+std::string("_bin_")+std::string(argv[5])+std::string("_contour.pdf");
     const char* contour_name_char = contour_name.c_str();
 
     c4->SaveAs(hist_name_char);

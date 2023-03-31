@@ -133,24 +133,25 @@ def data_extractor(filetype,filename):
         dfb['fitinf'+str(i)]=np.array(fitinfs[mask][:,i])
         #print("fitinf",str(i)," = ",fitinfs[mask][:,i])
 
+    print("before pre cuts, N = ",len(dfb))
     dfb=pre_cuts(dfb)
-    #print("pre_cuts done")
+    print("pre_cuts done, N = ", len(dfb))
     #dfb=logbeta0_cut(dfb)
     #print("logbeta cut done")
     dfb=anti_noise_cuts(dfb)
-    #print("anoise cut done")
+    print("pre_cuts done, N = ", len(dfb))
     dfb=get_angles(dfb)
     #print("get angles done")
     dfb=get_source_coords(dfb)
     #print("get source coord done")
-    print(dfb["t_sec"])
-    print(dfb["time"])
+    #print(dfb["t_sec"])
+    #print(dfb["time"])
     
     #dfb=dfb.drop(["showerfit_ra","showerfit_dec","sH_nhits","sH_atot","sH_tmin","sH_tmax","sH_ndoms","sH_nlines"],axis=1)
     #drop these only if not using NN for classification
     dfb=dfb.drop(["fitinf5","fitinf6","fitinf7","fitinf8","fitinf9","fitinf11","fitinf12","fitinf13","fitinf14","fitinf15","fitinf16","fitinf17","fitinf18","fitinf19","fitinf20","fitinf21","fitinf22"],axis=1)
 
-
+    
     dfb=moon_sun_dist(dfb,dfb["phi"],dfb["time"],dfb["theta"],loc="arca")  #git issue, local event requires phi insted of azi
     print("moon/sun dist calculated")
     print(dfb["moon_dist"].min())
@@ -170,13 +171,16 @@ def data_extractor(filetype,filename):
     print(dfb_sun.keys())
     print(len(dfb_sun.keys()))
 
+    print("Moon events: ",len(dfb_moon))
+    print("Sun events: ",len(dfb_sun))
+
     return dfb,dfb_sun,dfb_moon
-    
+    '''
     #print("len: ",len(dfb))
     #print(dfb.keys())
     #print(len(dfb.keys()))
-    #return dfb
-
+    return dfb
+    '''
 def get_angles(df):
     #RECO:
     #THETA muon and THETA source
@@ -319,14 +323,16 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     outfile = sys.argv[2]
 
-    data,data_sun,data_moon = data_extractor(filety,filename)
     #data = data_extractor(filety,filename)
+    
+    
+    data,data_sun,data_moon = data_extractor(filety,filename)
     
     data_sun.to_csv('dataframes/data/arca21/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
     data_moon.to_csv('dataframes/data/arca21/'+outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
 
-    data_sun = data_sun[["x","y","fitinf0","sun_dist","likelihood","fitinf10","t_sec"]]
-    data_moon = data_moon[["x","y","fitinf0","moon_dist","likelihood","fitinf10","t_sec"]]
+    data_sun = data_sun[["x","y","fitinf0","sun_dist","likelihood","fitinf10","t_sec","run_id"]]
+    data_moon = data_moon[["x","y","fitinf0","moon_dist","likelihood","fitinf10","t_sec","run_id"]]
 
     data_sun.to_csv('csv/arca21/data/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
     data_moon.to_csv('csv/arca21/data/'+outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
@@ -334,5 +340,6 @@ if __name__ == "__main__":
     
     #save all events, no cut near moon/sun
     data.to_csv('csv/arca21/data/'+outfile+'.txt', sep=',', header=False, index=False, mode='a')   
+
 
     print("---------",time.time() - start_time," seconds ----------")

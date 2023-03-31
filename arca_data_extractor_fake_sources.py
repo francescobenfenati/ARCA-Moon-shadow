@@ -16,9 +16,6 @@ import re
 import awkward as ak
 import utm
 import scipy.stats as st
-#import aa
-#from scipy.stats import poisson
-#import random
 import km3astro as km3
 from km3astro.coord import local_event, sun_local, moon_local
 from astropy.coordinates import (
@@ -37,148 +34,149 @@ from astropy.coordinates import (
 import astropy.units as u
 from astropy.time import Time
 import km3db
-db = km3db.DBManager()
+
+#remove any previous cookie
+#os.remove("/pbs/home/f/fbenfe/.km3netdb_cookie")
+
+#db = km3db.DBManager()
 #Preferable choice - already in Pandas DF
-sds = km3db.StreamDS(container="pd")
+#sds = km3db.StreamDS(container="pd")
 
 start_time = time.time()
 
-def data_extractor(filetype,filename):
+def data_extractor(filetype,filename,outputfile):
 
-    f = open(filename, "r")
-    files = (f.read()).split("\n")[:-1]
-    print(filename)
-    print(files)
-    listofdf=[]
     interaction_type=[]
-    for i in tqdm(files):
-        print(i)
-
-        dstfile="/sps/km3net/repo/data_processing/tag/v1_ARCA19_run_by_run/data_processing/prod/data/KM3NeT_00000116/v1.1_test/reco/"+i
-        listdf=[]
-        # at the end of the with block, the file is automatically closed
-        '''
-        with uproot.open(dstfile)["T"] as ifile:
-   
-            coords=ifile['coords']
-            listdf.append(coords.arrays(library="pd"))
-
-            #sumj=ifile['sum_jgandalf']  #missing in retr
-            #sumj=ifile['sum_jpptrack']
-            #listdf.append(sumj.arrays(library="pd"))
-
-            if filetype=='MC':
-                #print('This is a MC file.')
-                sum_mc_evts=ifile['sum_mc_evt']
-                listdf.append(sum_mc_evts.arrays(library="pd"))
-
+    #dstfile="/sps/km3net/repo/data_processing/tag/v1_ARCA19_run_by_run/data_processing/prod/data/KM3NeT_00000116/v1.1_test/reco/"+filename
+    dstfile = filename
+    print(dstfile)
+    # at the end of the with block, the file is automatically closed
+    '''
+    with uproot.open(dstfile)["T"] as ifile:
+    
+        coords=ifile['coords']
+        listdf.append(coords.arrays(library="pd"))
+    
+        #sumj=ifile['sum_jgandalf']  #missing in retr
+        #sumj=ifile['sum_jpptrack']
+        #listdf.append(sumj.arrays(library="pd"))
+    
+        if filetype=='MC':
+            #print('This is a MC file.')
+            sum_mc_evts=ifile['sum_mc_evt']
+            listdf.append(sum_mc_evts.arrays(library="pd"))
+    
             sumhits=ifile['sum_hits']
             sumHits=sumhits.arrays(library="pd")
             sumHits = sumHits.add_prefix('sH_')
             listdf.append(sumHits)
-
+    
             sum_tr_hits=ifile['sum_trig_hits']
             sumTrHits=sum_tr_hits.arrays(library="pd")
             sumTrHits = sumTrHits.add_prefix('Tr_')
             listdf.append(sumTrHits)
+    
+            #print('T tree done!')
+            dfb=pd.concat(listdf,axis=1)
+            #print(dfb.keys())
+            #print(len(listdf))
+            #print(dfb)
+    '''
 
-        #print('T tree done!')
-        dfb=pd.concat(listdf,axis=1)
-        #print(dfb.keys())
-        #print(len(listdf))
-        #print(dfb)
-        '''
-        dfb = pd.DataFrame()
-
-        offline=km3io.OfflineReader(dstfile)
-        has_trks = offline.n_tracks[:] > 0
-        #print(len(has_trks))
-
-        run_id=offline.events.run_id[has_trks]
-        dfb['run_id']=np.array(run_id)
+    dfb = pd.DataFrame()
         
-        likelihood=offline.events.tracks.lik[has_trks][:,0]
-        dfb['likelihood']=np.array(likelihood)
-
-        dir_x=offline.events.tracks.dir_x[has_trks][:,0]
-        dfb['dir_x']=np.array(dir_x)
-
-        dir_y=offline.events.tracks.dir_y[has_trks][:,0]
-        dfb['dir_y']=np.array(dir_y)
-
-        dir_z=offline.events.tracks.dir_z[has_trks][:,0]
-        dfb['dir_z']=np.array(dir_z)
-        #shower_dir_z=offline.events.tracks.dir_z[has_trks][:,1]
-        #dfb['aa_dir_z']=np.array(shower_dir_z)
-
-        pos_x=offline.events.tracks.pos_x[has_trks][:,0]
-        dfb['pos_x']=np.array(pos_x)
-
-        pos_y=offline.events.tracks.pos_y[has_trks][:,0]
-        dfb['pos_y']=np.array(pos_y)
-
-        pos_z=offline.events.tracks.pos_z[has_trks][:,0]
-        dfb['pos_z']=np.array(pos_z)
+    offline=km3io.OfflineReader(dstfile)
+    has_trks = offline.n_tracks[:] > 0
+    #print(len(has_trks))
+    
+    run_id=offline.events.run_id[has_trks]
+    dfb['run_id']=np.array(run_id)
         
-        t_sec = offline.events.t_sec[has_trks]
-        dfb['t_sec'] = np.array(t_sec)
-        dfb['time'] = pd.to_datetime(dfb["t_sec"], unit="s")
-
-        
-        E=offline.events.tracks.E[has_trks][:,0]
-        dfb['Energy']=np.array(E)
-
-        #print('1D array extraction done!')
-        rec_stage=offline.events.tracks.rec_stages[has_trks][:,0]
-        dfb['rec_stages']=ak.count(rec_stage, axis=-1)
-
-        #print('len rec_stages done')
-        rec_type=offline.events.tracks.rec_type[has_trks][:,0]
-        dfb['rec_type']=np.array(rec_type)
-
-        
-        #mask=(dfb.trackfit_ra != -999.000000) & (dfb.trackfit_dec != -999.000000)
-        mask=dfb.rec_type == 4000
-        dfb = dfb[mask]
-        fitinfs=offline.events.tracks.fitinf[has_trks][:,0]
-        dfb['fitinf0']=np.array(fitinfs[mask][:,0])
-        dfb['fitinf1']=np.array(fitinfs[mask][:,1])
-        dfb['fitinf2']=np.array(fitinfs[mask][:,2])
-        dfb['fitinf3']=np.array(fitinfs[mask][:,3])
-        dfb['fitinf4']=np.array(fitinfs[mask][:,4])
-        dfb['fitinf10']=np.array(fitinfs[mask][:,10])
-        
-        dfb=pre_cuts(dfb)
-        #print("pre_cuts done")
-        #dfb=logbeta0_cut(dfb)
-        #print("logbeta cut done")
-        dfb=anti_noise_cuts(dfb)
-        #print("anoise cut done")
-        dfb=get_angles(dfb)
-        #print("get angles done")
-        dfb=get_source_coords(dfb)
-        #print("get source coord done")
-        #print(dfb)
-        
-        #dfb=dfb.drop(["showerfit_ra","showerfit_dec","sH_nhits","sH_atot","sH_tmin","sH_tmax","sH_ndoms","sH_nlines"],axis=1)
-        
-        dfb=moon_sun_dist(dfb,dfb["phi"],dfb["time"],dfb["theta"],loc="arca")  #git issue, local event requires phi insted of azi
-        
-        listofdf.append(dfb)
-        #current, peak = tracemalloc.get_traced_memory()
-        #tracemalloc.reset_peak()
-        #print("current: ",current,", peak: ",peak)
-        #print("Events after cuts: ",len(dfb))
-
-
-
-        
-    print(len(listofdf))
-    result = pd.concat(listofdf,ignore_index=True)
-    result = result.reset_index(drop=True)
-    #print(result)
-
-    return result
+    likelihood=offline.events.tracks.lik[has_trks][:,0]
+    dfb['likelihood']=np.array(likelihood)
+    
+    dir_x=offline.events.tracks.dir_x[has_trks][:,0]
+    dfb['dir_x']=np.array(dir_x)
+    
+    dir_y=offline.events.tracks.dir_y[has_trks][:,0]
+    dfb['dir_y']=np.array(dir_y)
+    
+    dir_z=offline.events.tracks.dir_z[has_trks][:,0]
+    dfb['dir_z']=np.array(dir_z)
+    #shower_dir_z=offline.events.tracks.dir_z[has_trks][:,1]
+    #dfb['aa_dir_z']=np.array(shower_dir_z)
+    
+    pos_x=offline.events.tracks.pos_x[has_trks][:,0]
+    dfb['pos_x']=np.array(pos_x)
+    
+    pos_y=offline.events.tracks.pos_y[has_trks][:,0]
+    dfb['pos_y']=np.array(pos_y)
+    
+    pos_z=offline.events.tracks.pos_z[has_trks][:,0]
+    dfb['pos_z']=np.array(pos_z)
+    
+    t_sec = offline.events.t_sec[has_trks]
+    dfb['t_sec'] = np.array(t_sec)
+    dfb['time'] = pd.to_datetime(dfb["t_sec"], unit="s")
+    
+    
+    E=offline.events.tracks.E[has_trks][:,0]
+    dfb['Energy']=np.array(E)
+    
+    #print('1D array extraction done!')
+    rec_stage=offline.events.tracks.rec_stages[has_trks][:,0]
+    dfb['rec_stages']=ak.count(rec_stage, axis=-1)
+    
+    #print('len rec_stages done')
+    rec_type=offline.events.tracks.rec_type[has_trks][:,0]
+    dfb['rec_type']=np.array(rec_type)
+    
+    
+    #mask=(dfb.trackfit_ra != -999.000000) & (dfb.trackfit_dec != -999.000000)
+    mask=dfb.rec_type == 4000
+    dfb = dfb[mask]
+    fitinfs=offline.events.tracks.fitinf[has_trks][:,0]
+    dfb['fitinf0']=np.array(fitinfs[mask][:,0])
+    dfb['fitinf1']=np.array(fitinfs[mask][:,1])
+    dfb['fitinf2']=np.array(fitinfs[mask][:,2])
+    dfb['fitinf3']=np.array(fitinfs[mask][:,3])
+    dfb['fitinf4']=np.array(fitinfs[mask][:,4])
+    dfb['fitinf10']=np.array(fitinfs[mask][:,10])
+    
+    dfb=pre_cuts(dfb)
+    #print("pre_cuts done")
+    #dfb=logbeta0_cut(dfb)
+    #print("logbeta cut done")
+    dfb=anti_noise_cuts(dfb)
+    #print("anoise cut done")
+    dfb=get_angles(dfb)
+    #print("get angles done")
+    dfb=get_source_coords(dfb)
+    #print("get source coord done")
+    #print(dfb)
+    
+    #dfb=dfb.drop(["showerfit_ra","showerfit_dec","sH_nhits","sH_atot","sH_tmin","sH_tmax","sH_ndoms","sH_nlines"],axis=1)
+    
+    dfb=moon_sun_dist(dfb,dfb["phi"],dfb["time"],dfb["theta"],loc="arca")  #git issue, local event requires phi insted of azi
+            
+    print("total events = ",len(dfb))
+    dfb = dfb.reset_index(drop=True)
+    
+    shadow = {0:"moon",1:"sun"} 
+    for shad in [0,1]:
+        print(shadow[shad])
+        for shift in [-8,-4,0,4,8]:
+            print("Cutting on shift: ",shift)
+            df = distance_cut(dfb,12,shad,shift)
+            df = get_relative_coordinates(df,shad,shift)
+            print("events: ",len(df))
+            if shift == 0:
+                if len(df) != 0:
+                    df.to_csv(outputfile+'_'+shadow[shad]+'.txt',columns=["x","y","fitinf0",shadow[shad]+"_dist","likelihood","fitinf10","t_sec","run_id"],sep=' ',index=False,header=0,mode='a')
+            else:
+                if len(df) != 0:
+                    df.to_csv(outputfile+'_'+shadow[shad]+'_fake_'+str(shift)+'.txt',columns=["x","y","fitinf0",shadow[shad]+"_dist_"+str(shift),"likelihood","fitinf10","t_sec","run_id"],sep=' ',index=False,header=0,mode='a')
+    return None
 
 def get_angles(df):
     #RECO:
@@ -237,17 +235,36 @@ def Direction_cut(df,deg_dir_z_cut):
     df5=df[(180/np.pi)*np.arccos(df['dir_z'])<deg_dir_z_cut]
     return df5
 
+def get_relative_coordinates(df,shadow,tshift):
+    """Return x=Delta_azimuth and y=Delta_altitude wrt moon/sun"""
+    if tshift == 0:
+        if shadow == 0:
+            df["x"]=(df["local_azimuth"]*180/np.pi-df["az_moon"])*np.cos(df["local_altitude"])
+            df["y"]=(df["local_altitude"]*180/np.pi-df["alt_moon"])
+        elif shadow == 1:
+            df["x"]=(df["local_azimuth"]*180/np.pi-df["az_sun"])*np.cos(df["local_altitude"])
+            df["y"]=(df["local_altitude"]*180/np.pi-df["alt_sun"])
+    else:
+        if shadow == 0:
+            df["x"]=(df["local_azimuth"]*180/np.pi-df["az_moon_"+str(tshift)])*np.cos(df["local_altitude"])
+            df["y"]=(df["local_altitude"]*180/np.pi-df["alt_moon_"+str(tshift)])
+        elif shadow == 1:
+            df["x"]=(df["local_azimuth"]*180/np.pi-df["az_sun_"+str(tshift)])*np.cos(df["local_altitude"])
+            df["y"]=(df["local_altitude"]*180/np.pi-df["alt_sun_"+str(tshift)])
+    return df
+
+
 #local_event as defined by Tamas requires zenith but the definition is wrong as it takes the zenith but then treats it like if it was theta (180-zenith)
 #check it here:  https://git.km3net.de/km3py/km3astro/-/blob/master/km3astro/coord.py
 
-def moon_sun_dist(df, azimuth, time, theta, loc):   #git issue, local event requires phi insted of azi
+def moon_sun_dist(df, azimuth, time, theta, loc):   #git issue, local event requires phi insted of azi (check phi is given when function is called!)
     """Return distance of event to moon, in detector coordinates."""
-    """Also computes 5 fake sources, 4h aparts from each other"""
+    """Also computes 4 fake sources, 4h aparts from each other"""
     evt = local_event(azimuth, time, theta, loc)
     df["local_altitude"] = evt[:].alt.rad
     df["local_azimuth"] = evt.az.rad
     #shifts = [0]
-    shifts = [-8,-4,0,4,8,12]
+    shifts = [-8,-4,0,4,8]
     for tshift in shifts:
         print("Processing tshift = ",tshift,"...")
         moon = moon_local(time + datetime.timedelta(hours = tshift), loc)
@@ -305,28 +322,26 @@ def get_source_coords(df):
     df["source_zenith"] = zenith
     return df
 
-def moon_distance_cut(df,angle):
-    dist_to = moon_dist(df, df["phi"], df["faket"], df["theta"], loc="arca")  #git issue, local event requires phi insted of azi
-    df["moon_dist"]=dist_to.deg
-    df6=df[df["alt_moon"]>0]
-    df6=df6[df6["moon_dist"]<angle]
-    return df6
-
-def sun_distance_cut(df,angle):
-    dist_to = sun_dist(df, df["phi"], df["faket"], df["theta"], loc="arca")  #git issue, local event requires phi insted of azi
-    df["sun_dist"]=dist_to.deg
-    df6=df[df["alt_sun"]>0]
-    df6=df6[df6["sun_dist"]<angle]
-    return df6
-
+def distance_cut(df,angle,shadow,tshift):
+    if tshift == 0:
+        if shadow == 0:
+            dfc=df[df["alt_moon"]>0]
+            dfc=dfc[dfc["moon_dist"]<angle]
+        elif shadow == 1:
+            dfc=df[df["alt_sun"]>0]
+            dfc=dfc[dfc["sun_dist"]<angle]
+    else:
+        if shadow == 0:
+            dfc=df[df["moon_dist_"+str(tshift)]<angle]
+        elif shadow == 1:
+            dfc=df[df["sun_dist_"+str(tshift)]<angle]
+    return dfc
 
 if __name__ == "__main__":
     
     file_name = sys.argv[1]
     filety='data'
-    #batch = sys.argv[1]
-    data=data_extractor(filety,file_name)
-    f_name = file_name.split("/")[-1]#.split(".")[0]
-    data.to_hdf("/sps/km3net/users/fbenfe/Moon_shadow/dataframes/data/arca19/split/arca19_data_pre+anoise+sunmoon_fake_"+f_name+".h5", key='df', mode='w')
-    
+    outfile = sys.argv[2]
+    data_extractor(filety,file_name,outfile)
+            
 print("---------",time.time() - start_time," seconds ----------")

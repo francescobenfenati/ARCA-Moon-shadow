@@ -46,8 +46,9 @@ int main(int argc, char** argv) {
  TCanvas* c[3];
   
  //gROOT->SetStyle("Plain");
- gStyle->SetOptFit(1111);
- gStyle->SetOptStat("nemr");
+ //gStyle->SetOptFit(1111);
+ //gStyle->SetOptStat("nemr");
+ gStyle->SetOptStat(0);
 
  //double MinGrad = 0.1, MaxGrad = 4.1;
  //double bin_width = 0.1;
@@ -55,8 +56,9 @@ int main(int argc, char** argv) {
  double MinGrad = 0.1, MaxGrad = 4.0;
  double Nbin = 39, bin_width = 0.1;
  
- string daz, dalt, fitinf0, sundist, MC_sun_dist, lik, len;
+ string daz, dalt, fitinf0, sundist, MC_sun_dist, lik, len, time, run;
  double r=0;
+ double densities[40], errors[40];
 
  double beta_cut = std::stof(argv[3]);//0.32;//5.;//0.4 for arca8 moon, 0.34 for arca8 sun;
  
@@ -88,10 +90,11 @@ int main(int argc, char** argv) {
  h[1]->GetYaxis()->SetTitleFont(62);
  h[1]->GetYaxis()->SetLabelFont(62);
  h[1]->GetYaxis()->SetLabelSize(size);
- //h[1]->GetYaxis()->SetRangeUser(1800,3000);
+ //h[1]->GetYaxis()->SetRangeUser(0.,200);
  h[1]->GetXaxis()->SetRangeUser(0.,4);
-
-   // ---------- loop over ntuple muon events --------------------------
+ 
+ 
+  // ---------- loop over ntuple muon events --------------------------
    ifstream fstream;
    int ibin=0,i=0;
    double area=0;
@@ -100,25 +103,21 @@ int main(int argc, char** argv) {
      double R=r+bin_width; 
      double n1=0,n1dens=0;
      //int bin1 = h[1]->GetBin(ibin);
-     //fstream.open("/sps/km3net/users/fbenfe/Moon_shadow/csv/arca6/data/arca6_data_pre+anoise+moon.txt");
-     //fstream.open("/sps/km3net/users/fbenfe/Moon_shadow/csv/arca8/data/arca8_data_pre+anoise+sun.txt");
      //fstream.open("/sps/km3net/users/fbenfe/Moon_shadow/csv/arca19/data/arca19_data_pre+anoise+sun_fake_12.txt");
      fstream.open(argv[1]);
-     //fstream.open("/sps/km3net/users/fbenfe/Moon_shadow/csv/arca8+19_data_pre+anoise+moon.txt");
-     //fstream.open("/sps/km3net/users/fbenfe/Moon_shadow/csv/shifts/arca8_data_moon_shift_-30.txt");
-     //fstream.open("/sps/km3net/users/fbenfe/Moon_shadow/csv/arca6+8_data_pre+anoise+combined_shadow.txt");
-     //fstream.open("/sps/km3net/users/fbenfe/Moon_shadow/csv/arca6/arca6rbr_mu_9635-10286_pre+anoise+combined_shadow_12shifts.txt");
 
  {
       while ( ! fstream.eof() )
-    {
-      fstream >> daz >> dalt >> fitinf0 >> sundist >> lik >> len;
+	{//aware of n. of columns: remove time and run_id if not present in data !!!!
+	  fstream >> daz >> dalt >> fitinf0 >> sundist >> lik >> len >> time >> run;
      double DeltaAzi = std::stof(daz);
      double DeltaAlt = std::stof(dalt);
      double beta0 = std::stof(fitinf0)*TMath::RadToDeg();
      double sun_dist = std::stof(sundist);
      double likelihood = std::stof(lik);
      double track_length = std::stof(len);
+     int time_since_epoch = std::stoi(time);
+     int run_id = std::stoi(run);
     
      if ( beta0 < beta_cut ) // <------------------------------------------------------ CUT ----------------
        { 
@@ -136,11 +135,13 @@ int main(int argc, char** argv) {
       h[1]->SetBinError(ibin,TMath::Sqrt(n1)/area);
       //cout<<"bin center = "<< h[1]->GetBinCenter(ibin)<<endl;
       //cout<<"bin low edge = "<< h[1]->GetBinLowEdge(ibin)<<endl;
+      densities[i] = n1dens;
+      errors[i] = TMath::Sqrt(n1)/area;
       ibin++;
-      //cout<<"r = "<<r<<endl;
-      //cout<<"n = "<<n1<<endl;
-      //cout<<"area = "<<area<<endl;
-      //cout<<"density = "<<n1dens<<endl;
+      cout<<"r = "<<r<<endl;
+      cout<<"n = "<<n1<<endl;
+      cout<<"area = "<<area<<endl;
+      cout<<"density = "<<n1dens<<endl;
       i++;
       ntot+=n1;
  }
@@ -148,7 +149,22 @@ int main(int argc, char** argv) {
  fstream.close();
    } 
 
-   
+   //set y axis limits
+   double min = densities[0]-errors[0],max = densities[0]+errors[0];
+   for(i = 1;i < 40; i++) {
+     // Change < to > if you want to find the smallest element
+     if(densities[i]-errors[i] < min) {
+       min = densities[i]-errors[i];
+     }
+     if(densities[i]+errors[i] > max) {
+       max = densities[i]+errors[i];
+     }
+   }
+
+   h[1]->GetYaxis()->SetRangeUser(min-50,max+50);
+   //h[1]->GetYaxis()->SetRangeUser(0,max+50);
+
+ 
  // fit histograms
    
    c[0] = new TCanvas("c[0]", "c[0]", 10, 20, 600, 400);
@@ -204,7 +220,7 @@ int main(int argc, char** argv) {
    double chi2Fitbkg = f[1]->GetChisquare();
    double lambda = chi2Fitgaus - chi2Fitbkg;
 
-
+   
    cout<<"-----------------------------S1 fit------------------------------"<<endl;
    cout<<"Total events: "<<ntot<<endl;
    cout<<"Gaussian Fit : " <<'\n'
@@ -223,14 +239,23 @@ int main(int argc, char** argv) {
    cout<<"Delta Chi2 (H1-H0) = "<<lambda<<endl;
    cout <<"p-value(0,0) = " << TMath::Prob(-lambda,2) <<endl;
    cout <<"sigma = "<<sqrt(2)*TMath::ErfInverse(1.-TMath::Prob(-lambda,2)) << endl; // 2 becomes 1 if for nominal fit sigma is fixed
-      
+    
    c[0]->cd();
    h[1]->Draw("E,P,SAME");
    f[0]->Draw("SAME");
    f[1]->Draw("SAME");
    c[0]->Draw();
+
+   
+   TLegend *legend = new TLegend(0.65,0.2,0.85,0.4);
+   legend->AddEntry("f[0]","Gaussian fit","l");
+   legend->AddEntry("f[1]","Background fit","l");
+   legend->Draw();
+
    c[0]->SaveAs(argv[2]);
    //gStyle->SetOptFit(1111);
+   
+
    
    //app.Run(kTRUE);
  cout<<"finished"<<endl;

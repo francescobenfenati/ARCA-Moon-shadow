@@ -16,9 +16,6 @@ import re
 import awkward as ak
 import utm
 import scipy.stats as st
-#import aa
-#from scipy.stats import poisson
-#import random
 import km3astro as km3
 from km3astro.coord import local_event, sun_local, moon_local
 from astropy.coordinates import (
@@ -34,6 +31,25 @@ from astropy.coordinates import (
 )
 import astropy.units as u
 from astropy.time import Time
+import joblib
+#from sklearn.externals import joblib
+from tensorflow import keras
+from keras.models import Sequential,load_model
+from keras.layers import Activation, Dropout, Flatten, Dense
+from keras.models import Model
+from keras.callbacks import ModelCheckpoint,Callback,EarlyStopping
+from keras import backend as K
+#from keras.utils.generic_utils import get_custom_objects
+from keras.callbacks import LearningRateScheduler
+from sklearn.preprocessing import StandardScaler #distributing the input values according to a norm distribution (men=0 std err=1) Scaling data
+from sklearn.preprocessing import MinMaxScaler #normalize data x-min/max-min
+from keras.callbacks import ReduceLROnPlateau # after n epochs in which the metric monitored do not improve the learning rate is reduced, to fine tune
+from sklearn.model_selection import train_test_split
+import tensorflow as tf
+from tensorflow.keras import optimizers
+from tensorflow.keras.optimizers import schedules
+from keras.models import model_from_json
+
 import km3db
 #db = km3db.DBManager()
 #Preferable choice - already in Pandas DF
@@ -41,118 +57,51 @@ import km3db
 
 start_time = time.time()
 
-def data_extractor(filetype,filename,outfile):
+def data_extractor(filetype,filename):
 
-    #dstfile = open(filename, "r")
-    dstfile = filename
-    print(dstfile)
-    
-    # at the end of the with block, the file is automatically closed
-    ''' #only in dst files!
-    listdf=[]
-    with uproot.open(dstfile)["T"] as ifile:
-        #print(ifile.keys())
-        coords=ifile['coords']
-        listdf.append(coords.arrays(library="pd"))
+    df=pd.read_hdf(filename)
+    print(len(df))
+    print(df.keys())
+    ###
+    #Select data with CNN
+    ###
 
-        #sumj=ifile['sum_jgandalf'] #<------- this is not present in MC of bad period runs!
-        #sumj=ifile['sum_jpptrack']
-        #listdf.append(sumj.arrays(library="pd"))
+    #Load the scaler
+    loaded_scaler = joblib.load('CNN/scaler.pkl')
 
-        if filetype=='MC':
-            #print('This is a MC file.')
-            sum_mc_evts=ifile['sum_mc_evt']
-            listdf.append(sum_mc_evts.arrays(library="pd"))
+    # Load the model
+    loaded_model = keras.models.load_model('CNN/best_model_arca8_mu_test_080223_v8_noTbranch_unbalance.h5')
+    
+    data = df[['likelihood', 'dir_x', 'dir_y', 'dir_z', 'pos_x', 'pos_y', 'pos_z',
+       'Energy', 'rec_stages', 'rec_type', 'fitinf0', 'fitinf1', 'fitinf2',
+       'fitinf3', 'fitinf4', 'fitinf5', 'fitinf6', 'fitinf7', 'fitinf9',
+       'fitinf10', 'fitinf13', 'fitinf14', 'fitinf15', 'fitinf16', 'fitinf18',
+       'fitinf19', 'fitinf20', 'fitinf21', 'fitinf22', 'theta', 'alt', 'phi',
+       'source_azimuth', 'source_zenith']]
 
-            sumhits=ifile['sum_hits']
-            sumHits=sumhits.arrays(library="pd")
-            sumHits = sumHits.add_prefix('sH_')
-            listdf.append(sumHits)
+    #data = data.reset_index()
 
-            sum_tr_hits=ifile['sum_trig_hits']
-            sumTrHits=sum_tr_hits.arrays(library="pd")
-            sumTrHits = sumTrHits.add_prefix('Tr_')
-        #listdf.append(sumTrHits)
-    #print('T tree done!')
-    dfb=pd.concat(listdf,axis=1)
-    '''
-    dfb = pd.DataFrame()
+    data_scaled = pd.DataFrame(loaded_scaler.transform(data),columns = data.columns,index=data.index)
+    data_predict=loaded_model.predict(data_scaled)
+    data_scaled['y_pred']=np.array(data_predict)
+    
+    cut = 0.45
+    print("% of data after cut: ",len(data_scaled[data_scaled["y_pred"]>cut])/len(data_scaled))
+    data_cut = data_scaled[data_scaled["y_pred"]>cut]
+    data_cut = data_cut.drop(["y_pred"],axis=1)
+    data_good = pd.DataFrame(loaded_scaler.inverse_transform(data_cut),columns = data_cut.columns,index=data_cut.index)
+    
+    print(data_good)
+    print("Len after cut and inversce scaling: ",len(data_good))
+    dfb = data_good.merge(df[["run_id","t_sec","time","theta_inv"]], left_index=True, right_index=True) #add back the parameters removed for classification
 
-    offline=km3io.OfflineReader(dstfile)
-    has_trks = offline.n_tracks[:] > 0
-    print(len(has_trks))
-    
-    run_id=offline.events.run_id[has_trks]
-    dfb['run_id']=np.array(run_id)
-    
-    likelihood=offline.events.tracks.lik[has_trks][:,0]
-    dfb['likelihood']=np.array(likelihood)
-    
-    dir_x=offline.events.tracks.dir_x[has_trks][:,0]
-    dfb['dir_x']=np.array(dir_x)
-    
-    dir_y=offline.events.tracks.dir_y[has_trks][:,0]
-    dfb['dir_y']=np.array(dir_y)
-    
-    dir_z=offline.events.tracks.dir_z[has_trks][:,0]
-    dfb['dir_z']=np.array(dir_z)
-    #shower_dir_z=offline.events.tracks.dir_z[has_trks][:,1]
-    #dfb['aa_dir_z']=np.array(shower_dir_z)
-    
-    pos_x=offline.events.tracks.pos_x[has_trks][:,0]
-    dfb['pos_x']=np.array(pos_x)
-    
-    pos_y=offline.events.tracks.pos_y[has_trks][:,0]
-    dfb['pos_y']=np.array(pos_y)
-    
-    pos_z=offline.events.tracks.pos_z[has_trks][:,0]
-    dfb['pos_z']=np.array(pos_z)
-    
-    t_sec = offline.events.t_sec[has_trks]
-    dfb['t_sec'] = np.array(t_sec)
-    dfb['time'] = pd.to_datetime(dfb["t_sec"], unit="s")
-    
-    
-    E=offline.events.tracks.E[has_trks][:,0]
-    dfb['Energy']=np.array(E)
-    
-    #print('1D array extraction done!')
-    rec_stage=offline.events.tracks.rec_stages[has_trks][:,0]
-    dfb['rec_stages']=ak.count(rec_stage, axis=-1)
-    
-    #print('len rec_stages done')
-    rec_type=offline.events.tracks.rec_type[has_trks][:,0]
-    dfb['rec_type']=np.array(rec_type)
-    
-    
-    #mask=(dfb.trackfit_ra != -999.000000) & (dfb.trackfit_dec != -999.000000)
-    mask=dfb.rec_type == 4000
-    dfb = dfb[mask]
-    fitinfs=offline.events.tracks.fitinf[has_trks][:,0]
-    for i in range(23):
-        dfb['fitinf'+str(i)]=np.array(fitinfs[mask][:,i])
-        #print("fitinf",str(i)," = ",fitinfs[mask][:,i])
+    #data_good = data_good.reset_index()
+    #print(merged_df)
+    print(dfb.keys())
 
-    dfb=pre_cuts(dfb)
-    #print("pre_cuts done")
-    #dfb=logbeta0_cut(dfb)
-    #print("logbeta cut done")
-    dfb=anti_noise_cuts(dfb)
-    #print("anoise cut done")
-    dfb=get_angles(dfb)
-    #print("get angles done")
-    dfb=get_source_coords(dfb)
-    #print("get source coord done")
-    #print(dfb["t_sec"])
-    print(dfb["time"])
+    ###
     
-    #dfb=dfb.drop(["showerfit_ra","showerfit_dec","sH_nhits","sH_atot","sH_tmin","sH_tmax","sH_ndoms","sH_nlines"],axis=1)
-    #dfb=dfb.drop(['fitinf8','fitinf11','fitinf12','fitinf17'],axis=1)
-    
-    #drop these only if not using NN for classification:
-    dfb=dfb.drop(["fitinf5","fitinf6","fitinf7","fitinf8","fitinf9","fitinf11","fitinf12","fitinf13","fitinf14","fitinf15","fitinf16","fitinf17","fitinf18","fitinf19","fitinf20","fitinf21","fitinf22"],axis=1)
 
-    '''
     dfb=moon_sun_dist(dfb,dfb["phi"],dfb["time"],dfb["theta"],loc="arca")  #git issue, local event requires phi insted of azi
     print("moon/sun dist calculated")
     print(dfb["moon_dist"].min())
@@ -165,30 +114,15 @@ def data_extractor(filetype,filename,outfile):
     dfb_moon=get_relative_coordinate(dfb_moon,0)
     print("x y coords. done")
     
-
+    dfb = dfb.reset_index(drop=True)    
     dfb_sun = dfb_sun.reset_index(drop=True)
     dfb_moon = dfb_moon.reset_index(drop=True)
-    
+
     print(dfb_sun.keys())
     print(len(dfb_sun.keys()))
-    '''
-
-    runs = dfb["run_id"].unique()
-    for run in runs:
-        print("writing run ",run,flush=True)
-        dfi = dfb[dfb["run_id"]==run]
-        dfi = dfi.reset_index(drop=True)    
-        print(dfi["run_id"].unique())
-        print(dfi.keys())
-        print(len(dfi))
-        dfi.to_hdf("/sps/km3net/users/fbenfe/Moon_shadow/"+outfile+'_'+str(run)+".h5", key='df', mode='w')
-
-    return None
     
-    #print("len: ",len(dfb))
-    #print(dfb.keys())
-    #print(len(dfb.keys()))
-    #return dfb
+    return dfb,dfb_sun,dfb_moon
+    
 
 def get_angles(df):
     #RECO:
@@ -330,22 +264,25 @@ if __name__ == "__main__":
 
     filety='data'
     filename = sys.argv[1]
-    output = sys.argv[2]
-
-    data_extractor(filety,filename,output)
+    outfile = sys.argv[2]
+    
+    data,data_sun,data_moon = data_extractor(filety,filename)
     #data = data_extractor(filety,filename)
-    '''
-    data_sun.to_csv('dataframes/data/arca21/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
-    data_moon.to_csv('dataframes/data/arca21/'+outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
+    
+    data_sun.to_csv('dataframes/data/arca8/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
+    data_moon.to_csv('dataframes/data/arca8/'+outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
 
     data_sun = data_sun[["x","y","fitinf0","sun_dist","likelihood","fitinf10","t_sec"]]
     data_moon = data_moon[["x","y","fitinf0","moon_dist","likelihood","fitinf10","t_sec"]]
 
-    data_sun.to_csv('csv/arca21/data/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
-    data_moon.to_csv('csv/arca21/data/'+outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
+    data_sun.to_csv('csv/arca8/data/'+outfile+'_sun.txt',mode='a',sep=' ',index=False,header=0)
+    data_moon.to_csv('csv/arca8/data/'+outfile+'_moon.txt',mode='a',sep=' ',index=False,header=0)
     
     
     #save all events, no cut near moon/sun
-    data.to_csv('csv/arca21/data/'+outfile+'.txt', sep=',', header=False, index=False, mode='a')   
-    '''
+    data.to_csv('csv/arca8/data/'+outfile+'.txt', sep=',', header=False, index=False, mode='a')   
+    
+    #data = data_extractor(filety,filename)
+    #data.to_csv("csv/arca8/data/prova.txt", sep=',', header=False, index=False, mode='a')
+    
     print("---------",time.time() - start_time," seconds ----------")

@@ -35,9 +35,9 @@ from astropy.coordinates import (
 import astropy.units as u
 from astropy.time import Time
 import km3db
-#db = km3db.DBManager()
+db = km3db.DBManager()
 #Preferable choice - already in Pandas DF
-#sds = km3db.StreamDS(container="pd")
+sds = km3db.StreamDS(container="pd")
 
 
 
@@ -49,7 +49,7 @@ def data_extractor(filetype,filename):
     
     listdf=[]
     with uproot.open(dstfile)["T"] as ifile:
-        print(ifile.keys())
+        #print(ifile.keys())
         coords=ifile['coords']
         listdf.append(coords.arrays(library="pd"))
 
@@ -179,7 +179,7 @@ def data_extractor(filetype,filename):
     #print("get source coord done")
     
     '''
-    detector_name = "D0ARCA009"
+    detector_name = "D0ARCA021"
     #Generate uniform times
     run_start=int(str(sds.runs(detid=detector_name,run=run_id[0])['UNIXSTARTTIME'][0])[:-3])
     start_time=int(str(sds.runs(detid=detector_name,run=run_id[0])['UNIXJOBSTART'][0])[:-3])
@@ -202,7 +202,7 @@ def data_extractor(filetype,filename):
     #not for ORCA
     #dfb=dfb.drop(["mjd","nu_ra","nu_dec","MC_run","weight","weight_noOsc"],axis=1)
     dfb = dfb.drop(["mjd","nu_ra","nu_dec","MC_run","weight","weight_noOsc","t_sec","MC_trk_type",'t_sec','run_id','livetime_DAQ','livetime_sim','MC_E','MC_dir_x', 'MC_dir_y', 'MC_dir_z','MC_theta', 'MC_alt','MC_phi','fitinf8','fitinf11','fitinf12','fitinf17'],axis=1)
-
+    dfb = dfb.drop(['fitinf5','fitinf6','fitinf7','fitinf9','fitinf13','fitinf14','fitinf15','fitinf16','fitinf18','fitinf19','fitinf20','fitinf21','fitinf22'],axis=1)
     '''
     #making shifts
     #shifts=np.linspace(0,24*3600,12,endpoint=False)
