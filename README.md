@@ -141,19 +141,21 @@ NN predictions on test sample and on real data have been compared showing consis
 <img width="725" alt="image" src="https://user-images.githubusercontent.com/48324006/229106333-eb21a009-191b-46f9-afea-47473249e773.png">
 
 
-Also, in the 1D and 2D plots the presence of a signal is more evident, although the statistics is still too low to observe a clear signal (Event densities of ~1500 /deg^2 are estimated to be required for a 3sigma  signal)
+Also, in the 1D and 2D plots the presence of a signal is more evident, although the statistics is still too low to observe a clear signal and the 2D map is dominated by background (Event densities of ~1500 /deg^2 are estimated to be required for a $3\sigma$ signal)
 
 <img width="475" alt="image" src="https://user-images.githubusercontent.com/48324006/228802637-6708a10e-3116-4691-9c7f-00b92cf4179a.png">
 
 
 ![image](https://user-images.githubusercontent.com/48324006/228802543-1c52a40f-1bf4-4a61-9517-3baad40898f1.png)
 
-##Outlook
+## Outlook
+
 The implementation of all thse above-mentioned scripts in one single routine to be used also by non-experts users is foreseen. This routine could be exploited to perform regular analysis (for example every N months) on the detector pointing accuracy. 
 The analysis on ARCA8 could be also integrated with future analysis with the growing detector, and also with the foreseen introduction of dynamic calibrations that take into account the DOMs horizontal fluctuations along the Detection Units due to the sea currents.
 
 
 ### Other useful scripts
+
 If you need to separate runs from a merged dst file (too big to be analyzed as one) use:
 
 `python dst_merged_separator.py`
